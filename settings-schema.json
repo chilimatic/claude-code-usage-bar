@@ -1,0 +1,56 @@
+{
+    "layout": {
+        "type": "layout",
+        "pages": ["page-general", "page-limits"],
+        "page-general": {
+            "type": "page",
+            "title": "General",
+            "sections": ["section-general"]
+        },
+        "page-limits": {
+            "type": "page",
+            "title": "Limits",
+            "sections": ["section-limits"]
+        },
+        "section-general": {
+            "type": "section",
+            "title": "Refresh",
+            "keys": ["refresh-interval"]
+        },
+        "section-limits": {
+            "type": "section",
+            "title": "Token budgets",
+            "keys": ["limit-5h", "limit-week"]
+        }
+    },
+    "refresh-interval": {
+        "type": "spinbutton",
+        "default": 60,
+        "min": 15,
+        "max": 600,
+        "step": 15,
+        "units": "seconds",
+        "description": "How often to recompute usage",
+        "tooltip": "Lower values feel snappier but parse all session logs each tick."
+    },
+    "limit-5h": {
+        "type": "spinbutton",
+        "default": 8000000,
+        "min": 100000,
+        "max": 500000000,
+        "step": 500000,
+        "units": "weighted tokens",
+        "description": "5-hour rolling window budget (weighted tokens)",
+        "tooltip": "Cost-weighted tokens (input 1x, cache-create 1.25x, cache-read 0.1x, output 5x). Tune to match your plan tier or your observed max."
+    },
+    "limit-week": {
+        "type": "spinbutton",
+        "default": 50000000,
+        "min": 1000000,
+        "max": 5000000000,
+        "step": 1000000,
+        "units": "weighted tokens",
+        "description": "Weekly budget (weighted tokens)",
+        "tooltip": "Cost-weighted tokens allowed per rolling 7-day window."
+    }
+}
