@@ -1,13 +1,15 @@
-# Claude Usage — Cinnamon panel applet
+# Claude Usage — status-bar readouts
 
-Shows remaining Claude Code budget in the Cinnamon panel.
+Shows remaining Claude Code budget in your status bar. Ships two front-ends over
+one data source (`scripts/usage.py`): a **Cinnamon panel applet** and an
+**xmobar / xmonad** integration.
 
-Panel label looks like:
+Label looks like:
 
     Claude 38% · 1h47m
 
-Click the label for a dropdown with the active 5-hour window, the rolling
-7-day total, and a per-model breakdown.
+In Cinnamon, click the label for a dropdown with the active 5-hour window, the
+rolling 7-day total, and a per-model breakdown.
 
 ## How it works
 
@@ -35,7 +37,7 @@ a **weighted** token count using cost-proportional weights:
 
 The panel percentage is computed against weighted tokens.
 
-## Install
+## Install (Cinnamon)
 
     bash install.sh
 
@@ -54,6 +56,30 @@ The defaults are rough estimates for heavy Opus use on a Max plan — tune them
 to your observed maximum if you want the percentage to mean something
 specific.
 
+## xmobar / xmonad
+
+xmobar has no applet model — it runs a command on an interval and drops the
+output into its template. `scripts/usage.py` has a single-line mode for exactly
+this:
+
+    python3 scripts/usage.py --format xmobar
+
+prints one line, e.g. `<fc=#e0c060>Claude 38% · 1h47m</fc>` (or `Claude idle`).
+The `<fc>` color tracks 5h-budget usage: green `<60%`, yellow `60–85%`, red
+`>85%`, grey when idle. Add `--no-color` for plain text.
+
+No install/symlink is needed (unlike Cinnamon). Just wire it into your bar:
+
+1. Copy the relevant bits from [`examples/xmobar/claude.xmobarrc`](examples/xmobar/claude.xmobarrc)
+   into your xmobar config and fix the absolute path to `scripts/usage.py`.
+2. Make sure xmonad launches that xmobar config — see
+   [`examples/xmonad/xmonad.hs.snippet`](examples/xmonad/xmonad.hs.snippet).
+   xmonad itself renders nothing here; xmobar polls the script via `Run Com`.
+
+Tune the budgets with `--limit-5h` / `--limit-week` on the `Run Com` args, or by
+exporting `CLAUDE_LIMIT_5H` / `CLAUDE_LIMIT_WEEK` in the session that starts
+xmonad (xmobar inherits that environment).
+
 ## Development
 
 After editing files, hot-reload the applet without restarting Cinnamon:
@@ -64,4 +90,5 @@ After editing files, hot-reload the applet without restarting Cinnamon:
 
 Sanity-check the helper standalone:
 
-    python3 scripts/usage.py | jq .
+    python3 scripts/usage.py | jq .          # JSON (Cinnamon applet)
+    python3 scripts/usage.py --format xmobar # single line (xmobar)

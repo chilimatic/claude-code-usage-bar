@@ -1,0 +1,39 @@
+-- xmonad side of the Claude usage readout.
+--
+-- IMPORTANT: xmonad does NOT render the Claude usage itself. xmobar polls
+-- scripts/usage.py independently via a `Run Com` command (see
+-- examples/xmobar/claude.xmobarrc). So all xmonad has to do is launch xmobar
+-- with that config -- which most setups already do. There is no logHook /
+-- pipe wiring needed for %claude%, because it is a `Run Com` field, not a
+-- StdinReader field.
+--
+-- Two common ways to launch xmobar; use whichever matches your config.
+
+-- (A) Simple: spawn xmobar at startup with spawnPipe.
+--     (The pipe is only needed if you also feed %StdinReader% with your
+--     workspace log; %claude% works regardless.)
+
+import XMonad
+import XMonad.Util.Run (spawnPipe)
+import XMonad.Hooks.DynamicLog
+import System.IO (hPutStrLn)
+
+main :: IO ()
+main = do
+    bar <- spawnPipe "xmobar ~/.config/xmobar/claude.xmobarrc"
+    xmonad $ def
+        { logHook = dynamicLogWithPP xmobarPP { ppOutput = hPutStrLn bar }
+        -- ... your other settings ...
+        }
+
+-- (B) Modern: XMonad.Hooks.StatusBar with a property-based bar.
+--
+-- import XMonad.Hooks.StatusBar
+-- import XMonad.Hooks.StatusBar.PP
+--
+-- mySB = statusBarProp "xmobar ~/.config/xmobar/claude.xmobarrc" (pure xmobarPP)
+--
+-- main = xmonad . withSB mySB $ def { ... }
+--
+-- Either way, the same xmobarrc path is used and %claude% renders on its own
+-- ~60s refresh.

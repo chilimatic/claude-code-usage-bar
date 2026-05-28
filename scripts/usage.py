@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
-"""Scan ~/.claude/projects/**/*.jsonl and emit a single-line JSON summary of
-Claude Code token usage for (a) the active 5-hour rolling block and (b) the
-last 7 days. Designed to be called by the Cinnamon applet."""
+"""Scan ~/.claude/projects/**/*.jsonl and emit a summary of Claude Code token
+usage for (a) the active 5-hour rolling block and (b) the last 7 days.
+
+Two output formats:
+  --format json   (default) a single-line JSON object; consumed by the
+                  Cinnamon applet (applet.js).
+  --format xmobar a single line of text for an xmobar `Run Com` command, e.g.
+                  "Claude 38% · 1h47m" (with optional <fc> color markup)."""
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sys
@@ -29,6 +35,12 @@ W_OUTPUT = 5.0
 
 DEFAULT_LIMIT_5H = 8_000_000
 DEFAULT_LIMIT_WEEK = 50_000_000
+
+# xmobar <fc> colors keyed by how much of the 5h budget is used.
+XMOBAR_COLOR_LOW = "#88cc88"   # < 60%
+XMOBAR_COLOR_MID = "#e0c060"   # 60-85%
+XMOBAR_COLOR_HIGH = "#e06060"  # > 85%
+XMOBAR_COLOR_IDLE = "#888888"  # no active block
 
 
 def parse_ts(s: str) -> datetime | None:
@@ -167,21 +179,82 @@ def compute(records, now: datetime, limit_5h: int, limit_week: int) -> dict:
     }
 
 
-def main() -> int:
-    try:
-        limit_5h = int(os.environ.get("CLAUDE_LIMIT_5H", DEFAULT_LIMIT_5H))
-    except ValueError:
-        limit_5h = DEFAULT_LIMIT_5H
-    try:
-        limit_week = int(os.environ.get("CLAUDE_LIMIT_WEEK", DEFAULT_LIMIT_WEEK))
-    except ValueError:
-        limit_week = DEFAULT_LIMIT_WEEK
+def format_duration(seconds: float) -> str:
+    """Mirror of formatDuration() in applet.js: "5h23m" or "47m"."""
+    total = max(0, int(seconds))
+    h = total // 3600
+    m = (total % 3600) // 60
+    if h > 0:
+        return f"{h}h{m:02d}m"
+    return f"{m}m"
+
+
+def render_xmobar(result: dict, now: datetime, color: bool) -> str:
+    """Single-line label mirroring the Cinnamon panel label in applet.js:
+    "Claude 38% · 1h47m" when a block is active, else "Claude idle"."""
+    block = result.get("block") or {}
+    limit_5h = float(result.get("limit_5h") or 1) or 1.0
+    block_weighted = float(block.get("weighted") or 0)
+    block_pct = round(block_weighted / limit_5h * 100)
+
+    reset_at = parse_ts(block.get("reset_at")) if block.get("active") else None
+    if block.get("active") and reset_at is not None:
+        remaining = (reset_at - now).total_seconds()
+        text = f"Claude {block_pct}% · {format_duration(remaining)}"
+        if block_pct > 85:
+            fc = XMOBAR_COLOR_HIGH
+        elif block_pct >= 60:
+            fc = XMOBAR_COLOR_MID
+        else:
+            fc = XMOBAR_COLOR_LOW
+    else:
+        text = "Claude idle"
+        fc = XMOBAR_COLOR_IDLE
+
+    if color:
+        return f"<fc={fc}>{text}</fc>"
+    return text
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--format", choices=("json", "xmobar"), default="json")
+    p.add_argument("--no-color", action="store_true",
+                   help="xmobar format: omit <fc> color markup")
+    p.add_argument("--limit-5h", type=int, default=None,
+                   help="override CLAUDE_LIMIT_5H / default")
+    p.add_argument("--limit-week", type=int, default=None,
+                   help="override CLAUDE_LIMIT_WEEK / default")
+    return p.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(sys.argv[1:] if argv is None else argv)
+
+    if args.limit_5h is not None:
+        limit_5h = args.limit_5h
+    else:
+        try:
+            limit_5h = int(os.environ.get("CLAUDE_LIMIT_5H", DEFAULT_LIMIT_5H))
+        except ValueError:
+            limit_5h = DEFAULT_LIMIT_5H
+    if args.limit_week is not None:
+        limit_week = args.limit_week
+    else:
+        try:
+            limit_week = int(os.environ.get("CLAUDE_LIMIT_WEEK", DEFAULT_LIMIT_WEEK))
+        except ValueError:
+            limit_week = DEFAULT_LIMIT_WEEK
 
     now = datetime.now(timezone.utc)
     records = list(iter_usage_records())
     result = compute(records, now, limit_5h, limit_week)
-    json.dump(result, sys.stdout, separators=(",", ":"))
-    sys.stdout.write("\n")
+
+    if args.format == "xmobar":
+        print(render_xmobar(result, now, color=not args.no_color))
+    else:
+        json.dump(result, sys.stdout, separators=(",", ":"))
+        sys.stdout.write("\n")
     return 0
 
 

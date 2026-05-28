@@ -1,0 +1,39 @@
+-- Example xmobar config showing the Claude Code usage readout.
+--
+-- This is a minimal, self-contained example -- copy the relevant bits into
+-- your own ~/.config/xmobar/xmobarrc (or wherever your bar config lives).
+-- Nothing here needs to be "installed"; xmobar just runs the script.
+--
+-- 1. Edit the absolute path below to point at this repo's scripts/usage.py.
+-- 2. Make sure usage.py is executable, or call it via `python3`.
+-- 3. Reference %claude% somewhere in the `template`.
+--
+-- The script prints one line like "Claude 38% · 1h47m" (or "Claude idle"),
+-- wrapped in <fc=...> color markup chosen by 5h-budget usage:
+--   green  (<60%)   yellow (60-85%)   red (>85%)   grey (idle)
+--
+-- Markup in `Run Com` output is rendered by default. If your bar disables it,
+-- add "--no-color" to the args list below.
+--
+-- Tune the budgets either by adding e.g. "--limit-5h","8000000" to the args,
+-- or by exporting CLAUDE_LIMIT_5H / CLAUDE_LIMIT_WEEK in the session that
+-- starts xmonad/xmobar (xmobar inherits that environment).
+
+Config
+    { font     = "xft:DejaVu Sans Mono:size=10"
+    , bgColor  = "#1a1a1a"
+    , fgColor  = "#d0d0d0"
+    , position = TopW L 100
+    , commands =
+        [ -- Refresh every 60s. The trailing number is in TENTHS of a second,
+          -- so 600 = 60 seconds. Scanning the jsonl logs each tick is cheap.
+          Run Com "python3"
+              ["/ABSOLUTE/PATH/TO/status/scripts/usage.py", "--format", "xmobar"]
+              "claude" 600
+        , Run Date "%a %b %d  %H:%M" "date" 600
+        , Run StdinReader
+        ]
+    , sepChar  = "%"
+    , alignSep = "}{"
+    , template = "%StdinReader% }{ %claude%  |  %date%"
+    }
