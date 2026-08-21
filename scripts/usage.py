@@ -33,7 +33,9 @@ W_CACHE_CREATE = 1.25
 W_CACHE_READ = 0.1
 W_OUTPUT = 5.0
 
-DEFAULT_LIMIT_5H = 8_000_000
+# Local guesses, not real rate limits. Calibrate against the percentage Claude
+# Code's own /status reports: limit = block.weighted / (status_pct / 100).
+DEFAULT_LIMIT_5H = 90_000_000
 DEFAULT_LIMIT_WEEK = 50_000_000
 
 # xmobar <fc> colors keyed by how much of the 5h budget is used.

@@ -35,13 +35,13 @@
     },
     "limit-5h": {
         "type": "spinbutton",
-        "default": 8000000,
+        "default": 90000000,
         "min": 100000,
         "max": 500000000,
         "step": 500000,
         "units": "weighted tokens",
         "description": "5-hour rolling window budget (weighted tokens)",
-        "tooltip": "Cost-weighted tokens (input 1x, cache-create 1.25x, cache-read 0.1x, output 5x). Tune to match your plan tier or your observed max."
+        "tooltip": "Cost-weighted tokens (input 1x, cache-create 1.25x, cache-read 0.1x, output 5x). This is a local guess, not your real rate limit. Calibrate: limit = block.weighted / (the 5h percent from Claude Code's /status ÷ 100)."
     },
     "limit-week": {
         "type": "spinbutton",

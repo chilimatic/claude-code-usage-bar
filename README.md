@@ -1,6 +1,7 @@
 # Claude Usage — status-bar readouts
 
-Shows remaining Claude Code budget in your status bar. Ships two front-ends over
+Shows how much of your Claude Code budget you have consumed, in your status bar.
+The percentage counts **up** as you use budget. Ships two front-ends over
 one data source (`scripts/usage.py`): a **Cinnamon panel applet** and an
 **xmobar / xmonad** integration.
 
@@ -49,12 +50,30 @@ click +.
 | Key                | Default      | Notes                                                                  |
 | ------------------ | ------------ | ---------------------------------------------------------------------- |
 | `refresh-interval` | 60 s         | How often to re-scan the jsonl logs.                                   |
-| `limit-5h`         | 8,000,000    | Weighted-token budget for the 5h rolling window.                       |
+| `limit-5h`         | 90,000,000   | Weighted-token budget for the 5h rolling window.                       |
 | `limit-week`       | 50,000,000   | Weighted-token budget for the rolling 7-day window.                    |
 
-The defaults are rough estimates for heavy Opus use on a Max plan — tune them
-to your observed maximum if you want the percentage to mean something
-specific.
+These budgets are local guesses, not your account's real rate limit — nothing
+here talks to Anthropic. Uncalibrated, the panel percentage will not match the
+one Claude Code's own `/status` reports, and can be off by an order of
+magnitude.
+
+### Calibrating
+
+Do this once per plan tier:
+
+1. Note the 5h percentage that `/status` shows inside Claude Code — call it `P`.
+2. Read the weighted tokens for the same window:
+   `python3 scripts/usage.py | jq .block.weighted` — call it `W`.
+3. Set `limit-5h` to `W / (P / 100)`.
+
+Example: `/status` says 8%, `block.weighted` is 7,450,000 → `limit-5h` =
+93,000,000. Repeat with `/status`'s weekly percentage and `.week.weighted`
+for `limit-week`.
+
+The 5h default above is one such measurement (heavy Opus 5 use, Max plan), so
+it is a better starting point than a round number — but it is still someone
+else's account. Calibrate.
 
 ## xmobar / xmonad
 
