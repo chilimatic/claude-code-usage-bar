@@ -1,6 +1,7 @@
 # Claude Usage — status-bar readouts
 
-Shows remaining Claude Code budget in your status bar. Ships two front-ends over
+Shows how much of your Claude Code budget you have consumed, in your status bar.
+The percentage counts **up** as you use budget. Ships two front-ends over
 one data source (`scripts/usage.py`): a **Cinnamon panel applet** and an
 **xmobar / xmonad** integration.
 
